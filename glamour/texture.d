@@ -29,6 +29,7 @@ private {
     import std.traits : isPointer;
     import std.string : toStringz;
     import std.exception : enforce;
+    import std.conv : to;
 
     debug import std.stdio : stderr;
 }
@@ -55,7 +56,7 @@ mixin template CommonTextureMethods() {
     }
     
     /// Sets a texture parameter.
-    void set_paramter(T)(GLuint name, T params) if(is(T : int) || is(T : float)) {
+    void set_parameter(T)(GLuint name, T params) if(is(T : int) || is(T : float)) {
         static if(is(T : int)) {
             checkgl!glTexParameteri(target, name, params);
         } else {
@@ -77,6 +78,12 @@ mixin template CommonTextureMethods() {
         return ret;
     }
     
+    /// Generates mipmaps for the textre (also binds it)
+    void generate_mipmaps() {
+        bind();
+        checkgl!glGenerateMipmap(target);
+    }
+
     /// Binds the texture.
     void bind() {
         checkgl!glBindTexture(target, texture);
@@ -113,9 +120,14 @@ mixin template CommonTextureMethods() {
 interface ITexture {
     GLuint get_unit(); ///
     void remove(); ///
+<<<<<<< HEAD
     void set_paramter(T)(GLuint name, T params); /// 
+=======
+    void set_parameter(T)(GLuint name, T params); ///
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
     float[] get_parameter(GLuint name); /// 
     void set_data(T)(T data); /// 
+    void generate_mipmaps(); ///
     void bind(); /// 
     void activate(GLuint unit); /// 
     void activate(); /// 
@@ -161,12 +173,13 @@ class Texture1D : ITexture {
     /// Params:
     /// data = A pointer to the image data or an array of the image data.
     /// internal_format = Specifies the number of color components in the texture.
+    /// width = If data is an array and width is -1, the width will be infered from the array, otherwise it must be valid.
     /// format = Specifies the format of the pixel data.
     /// type = Specifies the data type of the pixel data.
     ///
     /// See_Also:
     /// OpenGL, http://www.opengl.org/sdk/docs/man4/xhtml/glTexImage1D.xml
-    void set_data(T)(T data, GLint internal_format, GLenum format, GLenum type) {
+    void set_data(T)(T data, GLint internal_format, int width, GLenum format, GLenum type) {
         bind();
 
         this.internal_format = internal_format;
@@ -177,10 +190,13 @@ class Texture1D : ITexture {
             auto d = data;
         } else {
             auto d = data.ptr;
+
+            if(width == -1) {
+                width = cast(int)data.length;
+            }
         }
-        
-        checkgl!glTexImage1D(GL_TEXTURE_1D, 0, internal_format, cast(int)(data.length), 0, format, type, d);
-        unbind();
+
+        checkgl!glTexImage1D(GL_TEXTURE_1D, 0, internal_format, width, 0, format, type, d);
     }
 }
 
@@ -258,13 +274,17 @@ class Texture2D : ITexture {
         if(mipmaps) {
             checkgl!glGenerateMipmap(GL_TEXTURE_2D);
         }
-        
-        unbind();
     }
     
-    version(stb) {
-        /// Loads an image with stb_image and afterwards loads it into a Texture2D struct.
-        static Texture2D from_image(string filename) {
+    /// Loads an image and afterwards loads it into a Texture2D struct.
+    /// Image can be loaded by means of DevIL, stb and SDLImage. To select
+    /// specific way use versions stb and SDLImage. DevIL is used by default.
+    ///
+    /// $(RED DevIL/SDLImage must be loaded and initialized manually!)
+    static Texture2D from_image(string filename) {
+        auto tex = new Texture2D();
+
+        version(stb) {        
             int x;
             int y;
             int comp;
@@ -282,13 +302,8 @@ class Texture2D : ITexture {
                 default: throw new TextureException("Unknown/Unsupported stbi image format");
             }
 
-            auto tex = new Texture2D();
             tex.set_data(data, image_format, x, y, image_format, GL_UNSIGNED_BYTE);
-            return tex;
-        }
-    } else version (SDLImage) {
-        /// Loads an image with SDL2Image and afterwards loads it into a Texture2D struct.
-        static Texture2D from_image(string filename) {
+        } else version (SDLImage) {
             // make sure the texture has the right side up
             //thanks to tito http://stackoverflow.com/questions/5862097/sdl-opengl-screenshot-is-black 
             SDL_Surface* flip(SDL_Surface* surface) { 
@@ -313,38 +328,39 @@ class Texture2D : ITexture {
             
             auto surface = IMG_Load(filename.toStringz());
             
+<<<<<<< HEAD
             enforce(surface, new TextureException("Error loading image " ~ filename));
+=======
+            enforce(surface, new TextureException("Error loading image " ~ filename ~ ": " ~ to!string(SDL_GetError())));
+            scope(exit) SDL_FreeSurface(surface);
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
             
+            enforce(surface.format.BytesPerPixel == 3 || surface.format.BytesPerPixel == 4, "With SDLImage Glamour supports loading images only with 3 or 4 bytes per pixel format.");
             auto image_format = GL_RGB;
             
             if (surface.format.BytesPerPixel == 4) {
               image_format = GL_RGBA;
             }
             
-            auto tex = new Texture2D();
-            tex.set_data(flip(surface).pixels, image_format, surface.w, surface.h, image_format, GL_UNSIGNED_BYTE);
-            
-            return tex;
-        }
-    } else {
-        /// Loads an image with DevIL and afterwards loads it into a Texture2D struct.
-        /// 
-        /// $(RED DevIL must be loaded and initialized manually!)
-        static Texture2D from_image(string filename) {
+            auto flipped = flip(surface);
+            tex.set_data(flipped.pixels, image_format, surface.w, surface.h, image_format, GL_UNSIGNED_BYTE);
+            SDL_FreeSurface(flipped);
+        } else {
+            /// DevIl is default choice
             ILuint id;
             ilGenImages(1, &id);
+            scope(exit) ilDeleteImage(1, id);
             
             if(!ilLoadImage(toStringz(filename))) {
                 throw new TextureException("Unable to load image: " ~ filename);
             }
             
-            auto tex =  new Texture2D();
             tex.set_data(ilGetData(), ilGetInteger(IL_IMAGE_FORMAT),
                                       ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT),
                                       ilGetInteger(IL_IMAGE_FORMAT), ilGetInteger(IL_IMAGE_TYPE));
-            return tex;
-            
         }
+
+        return tex;
     }
 }
 
@@ -412,7 +428,6 @@ class Texture3DBase(GLenum target_) : ITexture {
         }
 
         checkgl!glTexImage3D(target, level, internal_format, width, height, depth, 0, format, type, d);
-        unbind();
     }
 }
 

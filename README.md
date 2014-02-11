@@ -5,7 +5,7 @@ glamour
 
 ## Installation ##
 
-*Glamour* supports three `-version` switches:
+*Glamour* supports these `-version` switches:
 
 * `-version=gl3n` – Adds gl3n support to glamour (you can pass gl3n vectors and matrices directly as uniform).
 * `-version=Derelict3` – Uses Derelict3 instead of Derelict2 for `glamour.gl`.
@@ -22,7 +22,15 @@ make DCFLAGS+="-version=Derelict3 -version=stb -version=gl3n `pkg-config --libs 
 # installing
 make install
 ```
+## Example ##
 
+Simple examples are available now in example directory. The simplest way to try them, is to use the dub package manager.
+Go to directory where glamour is installed and use the following:
+```
+dub run --config=example
+dub run --config=example_texture
+```
+This command installs all dependencies, builds the example and runs it. 
 
 ## Documentation ##
 

@@ -11,7 +11,7 @@ private {
                         glLinkProgram, glGetShaderiv, glGetShaderInfoLog,
                         glGetProgramInfoLog, glGetProgramiv, glShaderSource,
                         glUseProgram, glAttachShader, glGetAttribLocation,
-                        glDeleteProgram, glDeleteShader,
+                        glDeleteProgram, glDeleteShader, glGetFragDataLocation,
                         glGetUniformLocation, glUniform1i, glUniform1f,
                         glUniform2f, glUniform2fv, glUniform3fv,
                         glUniform4fv, glUniformMatrix2fv, glUniformMatrix2x3fv,
@@ -26,6 +26,10 @@ private {
     import std.string : format, splitLines, toStringz, toLower, strip;
     import std.array : join, split;
     import std.algorithm : startsWith, endsWith;
+<<<<<<< HEAD
+=======
+    import std.exception : enforceEx;
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
     import std.typecons : Tuple;
     
     version(gl3n) {
@@ -138,7 +142,9 @@ class Shader {
     GLint[string] uniform_locations;
     /// Attrib locations will be cached here.
     GLint[string] attrib_locations;
-    
+    /// Frag-data locations will be cached here.
+    GLint[string] frag_locations;
+
     /// Loads the shaders directly from a file.
     this(string file) {
         this(stripExtension(baseName(file)), readText(file));
@@ -233,7 +239,35 @@ class Shader {
             return *loc;
         }
         
-        return attrib_locations[name] = checkgl!glGetAttribLocation(program, toStringz(name));
+        debug {
+            auto loc = checkgl!glGetAttribLocation(program, toStringz(name));
+            if(loc < 0) {
+                stderr.writefln(`glGetAttribLocation returned a value < 0 for location: "%s"`, name);
+            }
+
+            return attrib_locations[name] = loc;
+        } else {
+            return attrib_locations[name] = checkgl!glGetAttribLocation(program, toStringz(name));
+        }
+    }
+
+    /// Queries an fragment-data location from OpenGL and caches it in $(I frag_locations).
+    /// If the location was already queried the cache is returned.
+    GLint get_frag_location(string name) {
+        if(auto loc = name in frag_locations) {
+            return *loc;
+        }
+
+        debug {
+            auto loc = checkgl!glGetFragDataLocation(program, toStringz(name));
+            if(loc < 0) {
+                stderr.writefln(`glGetFragDataLocation returned a value < 0 for location: "%s"`, name);
+            }
+
+            return frag_locations[name] = loc;
+        } else {
+            return frag_locations[name] = checkgl!glGetFragDataLocation(program, toStringz(name));
+        }
     }
     
     /// Queries an uniform location from OpenGL and caches it in $(I uniform_locations).
@@ -243,9 +277,18 @@ class Shader {
             return *loc;
         }
         
-        return uniform_locations[name] = checkgl!glGetUniformLocation(program, toStringz(name));
+        debug {
+            auto loc = checkgl!glGetUniformLocation(program, toStringz(name));
+            if(loc < 0) {
+                stderr.writefln(`glGetUniformLocation returned a value < 0 for location: "%s"`, name);
+            }
+
+            return uniform_locations[name] = loc;
+        } else {
+            return uniform_locations[name] = checkgl!glGetUniformLocation(program, toStringz(name));
+        }
     }
-        
+
     // gl3n integration
     version(gl3n) {
         /// If glamour gets compiled with version=gl3n support for
@@ -307,40 +350,124 @@ class Shader {
     void uniform1i(string name, int value) {
         checkgl!glUniform1i(get_uniform_location(name), value);
     }
+
+    /// ditto
+    void uniform1i(GLint name, int value) {
+        checkgl!glUniform1i(name, value);
+    }
     
     /// ditto
     void uniform1f(string name, float value) {
         checkgl!glUniform1f(get_uniform_location(name), value);
     }
-    
+
+    /// ditto
+    void uniform1f(GLint name, float value) {
+        checkgl!glUniform1f(name, value);
+    }
+
     /// ditto
     void uniform2f(string name, float value1, float value2) {
         checkgl!glUniform2f(get_uniform_location(name), value1, value2);
     }
 
     /// ditto
-    void uniform2fv(string name, const float[] value, int count=1) {
+    void uniform2f(GLint name, float value1, float value2) {
+        checkgl!glUniform2f(name, value1, value2);
+    }
+
+    /// ditto
+    void uniform2fv(string name, const float[] value) {
+        checkgl!glUniform2fv(get_uniform_location(name), cast(int)(value.length/2), value.ptr);
+    }
+
+    /// ditto
+    void uniform2fv(GLint name, const float[] value) {
+        checkgl!glUniform2fv(name, cast(int)(value.length/2), value.ptr);
+    }
+
+    /// ditto
+    void uniform2fv(string name, const float[] value, int count) {
         checkgl!glUniform2fv(get_uniform_location(name), count, value.ptr);
     }
     
     /// ditto
-    void uniform3fv(string name, const float[] value, int count=1) {
+    void uniform2fv(GLint name, const float[] value, int count) {
+        checkgl!glUniform2fv(name, count, value.ptr);
+    }
+
+    /// ditto
+    void uniform3fv(string name, const float[] value) {
+        checkgl!glUniform3fv(get_uniform_location(name), cast(int)(value.length/3), value.ptr);
+    }
+
+    /// ditto
+    void uniform3fv(string name, const float[] value, int count) {
         checkgl!glUniform3fv(get_uniform_location(name), count, value.ptr);
+    }
+
+    /// ditto
+    void uniform3fv(GLint name, const float[] value, int count) {
+        checkgl!glUniform3fv(name, count, value.ptr);
+    }
+
+    /// ditto
+    void uniform4fv(string name, const float[] value) {
+        checkgl!glUniform4fv(get_uniform_location(name), cast(int)(value.length/4), value.ptr);
+    }
+
+    /// ditto
+    void uniform4fv(GLint name, const float[] value) {
+        checkgl!glUniform4fv(name, cast(int)(value.length/4), value.ptr);
     }
     
     /// ditto
-    void uniform4fv(string name, const float[] value, int count=1) {
+    void uniform4fv(string name, const float[] value, int count) {
         checkgl!glUniform4fv(get_uniform_location(name), count, value.ptr);
+    }
+
+    /// ditto
+    void uniform4fv(GLint name, const float[] value, int count) {
+        checkgl!glUniform4fv(name, count, value.ptr);
+    }
+
+    /// ditto
+    void uniform_matrix3fv(string name, const float[] value, GLboolean transpose=GL_TRUE) {
+        checkgl!glUniformMatrix3fv(get_uniform_location(name), cast(int)(value.length/9), transpose, value.ptr);
+    }
+
+    /// ditto
+    void uniform_matrix3fv(GLint name, const float[] value, GLboolean transpose=GL_TRUE) {
+        checkgl!glUniformMatrix3fv(name, cast(int)(value.length/9), transpose, value.ptr);
     }
     
     /// ditto
     void uniform_matrix3fv(string name, const float[] value, GLboolean transpose=GL_TRUE, int count=1) {
         checkgl!glUniformMatrix3fv(get_uniform_location(name), count, transpose, value.ptr);
     }
+
+    /// ditto
+    void uniform_matrix3fv(GLint name, const float[] value, GLboolean transpose=GL_TRUE, int count=1) {
+        checkgl!glUniformMatrix3fv(name, count, transpose, value.ptr);
+    }
     
+    /// ditto
+    void uniform_matrix4fv(string name, const float[] value, GLboolean transpose=GL_TRUE) {
+        checkgl!glUniformMatrix4fv(get_uniform_location(name), cast(int)(value.length/16), transpose, value.ptr);
+    }
+
+    /// ditto
+    void uniform_matrix4fv(GLint name, const float[] value, GLboolean transpose=GL_TRUE) {
+        checkgl!glUniformMatrix4fv(name, cast(int)(value.length/16), transpose, value.ptr);
+    }
+
     /// ditto
     void uniform_matrix4fv(string name, const float[] value, GLboolean transpose=GL_TRUE, int count=1) {
         checkgl!glUniformMatrix4fv(get_uniform_location(name), count, transpose, value.ptr);
     }
     
+    /// ditto
+    void uniform_matrix4fv(GLint name, const float[] value, GLboolean transpose=GL_TRUE, int count=1) {
+        checkgl!glUniformMatrix4fv(name, count, transpose, value.ptr);
+    }
 }

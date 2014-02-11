@@ -7,6 +7,7 @@ private {
                         GL_STATIC_DRAW, GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER,
                         glBindBuffer, glBufferData, glBufferSubData,
                         glGenBuffers, glDeleteBuffers;
+    import glamour.shader : Shader;
     import glamour.util : checkgl;
                         
     import std.traits : isArray, isPointer;
@@ -20,6 +21,8 @@ interface IBuffer {
     void bind(); ///
     void unbind(); ///
     void set_data(T)(const ref T data, GLenum hint = GL_STATIC_DRAW); ///
+    void update(T)(const T data, GLintptr offset); ///
+    void update(T)(const T ptr, size_t size, GLintptr offset); /// should the interface have this overload member? set_date() have no overload version.
 }
 
 /// Represents an OpenGL element buffer.
@@ -49,7 +52,7 @@ class ElementBuffer : IBuffer {
     /// ditto
     this(T)(const T ptr, size_t size, GLenum hint = GL_STATIC_DRAW) if(isPointer!T) {
         checkgl!glGenBuffers(1, &buffer);
-        set_data(data, size, hint);
+        set_data(ptr, size, hint);
     }
 
     ~this() {
@@ -90,6 +93,20 @@ class ElementBuffer : IBuffer {
 
         length = size;
         this.hint = hint;
+    }
+
+    /// Updates the Buffer, using glBufferSubData.
+    void update(T)(const T data, GLintptr offset) if(isArray!T) {
+        checkgl!glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+        checkgl!glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, data.length*(ElementType!T).sizeof, data.ptr);
+        checkgl!glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    /// ditto
+    void update(T)(const T ptr, size_t size, GLintptr offset) if(isPointer!T) {
+        checkgl!glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
+        checkgl!glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, size, ptr);
+        checkgl!glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 }
 
@@ -151,11 +168,17 @@ class Buffer : IBuffer {
     /// stride = Specifies the byte offset between consecutive generic vertex attributes.
     /// normalized = Specifies whether fixed-point data values should be normalized (GL_TRUE) or
     ///                converted directly as fixed-point values (GL_FALSE = default) when they are accessed.
-    void bind(GLuint attrib_location, GLenum type, GLint size=4, GLsizei offset=0,
-              GLsizei stride=0, GLboolean normalized=GL_FALSE) {
+    void bind(GLint attrib_location, GLenum type, GLint size, GLsizei offset,
+              GLsizei stride, GLboolean normalized=GL_FALSE) {
         checkgl!glBindBuffer(GL_ARRAY_BUFFER, buffer);
         checkgl!glEnableVertexAttribArray(attrib_location);
         checkgl!glVertexAttribPointer(attrib_location, size, type, normalized, stride, cast(void *)offset);
+    }
+
+    /// ditto
+    void bind(Shader shader, string location, GLenum type, GLint size, GLsizei offset,
+              GLsizei stride, GLboolean normalized=GL_FALSE) {
+        bind(shader.get_attrib_location(location), type, size, offset, stride, normalized);
     }
 
     /// Unbinds the buffer.

@@ -108,6 +108,7 @@ class RealSampler : ISampler {
 /// This emulates an OpenGL Sampler on platforms where no glGenSamplers is available (like OSX).
 /// This only works with Texture1D, Texture2D and Texture3D so far.
 class EmulatedSampler : ISampler {
+<<<<<<< HEAD
     protected {
         Parameter[GLenum] parameters;
         struct Parameter {
@@ -129,6 +130,27 @@ class EmulatedSampler : ISampler {
         }
     }
     
+=======
+    protected Parameter[GLenum] parameters;
+    protected struct Parameter {
+        union {
+            int i;
+            float f;
+        }
+        bool is_float;
+
+        this(float f) {
+            this.is_float = true;
+            this.f = f;
+        }
+
+        this(int i) {
+            this.is_float = false;
+            this.i = i;
+        }
+    }
+
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
     /// Sets a sampler parameter (and stores it internally).
     void set_parameter(T)(GLenum name, T params) if(is(T : int) || is(T : float)) {
       parameters[name] = Parameter(params);
@@ -136,10 +158,15 @@ class EmulatedSampler : ISampler {
 
     /// Returns the stored parameter or [float.nan] if not internally stored.
     float[] get_parameter(GLenum name)
+<<<<<<< HEAD
         in {
             assert(name != GL_TEXTURE_BORDER_COLOR);
             assert(parameters[name].isFloat);
         }
+=======
+        in { assert(name != GL_TEXTURE_BORDER_COLOR);
+             assert(parameters[name].is_float); }
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
         body {
             if(auto param = name in parameters) {
                 return [param.f];
@@ -169,7 +196,11 @@ class EmulatedSampler : ISampler {
           throw new ShaderException("Unsupported texture type");
 
         foreach(name, parameter; parameters) {
+<<<<<<< HEAD
             if(parameter.isFloat) {
+=======
+            if(parameter.is_float) {
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
                 checkgl!glTexParameterf(unit, name, parameter.f);
             } else {
                 checkgl!glTexParameteri(unit, name, parameter.i);

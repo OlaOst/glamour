@@ -63,6 +63,7 @@ geany-tag:
 	geany -c geany_config -g $(PROJECT_NAME).d.tags $(SOURCES)
 
 pkgfile-shared:
+<<<<<<< HEAD
 	@echo ------------------ Building pkg-config file
 	@echo "# Package Information for pkg-config"                        >  $(PKG_CONFIG_FILE)
 	@echo "# Author: $(AUTHOR)"                                         >> $(PKG_CONFIG_FILE)
@@ -77,6 +78,33 @@ pkgfile-shared:
 	@echo Name: "$(PROJECT_NAME)"                                       >> $(PKG_CONFIG_FILE)
 	@echo Description: "$(DESCRIPTION)"                                 >> $(PKG_CONFIG_FILE)
 	@echo Version: "$(PROJECT_VERSION)"                                 >> $(PKG_CONFIG_FILE)
+	@echo Libs: $(LINKERFLAG)-l$(PROJECT_NAME)-$(COMPILER)              >> $(PKG_CONFIG_FILE)
+	@echo Cflags: -I$(INCLUDE_DIR)$(PATH_SEP)$(PROJECT_NAME) $(LDCFLAGS)>> $(PKG_CONFIG_FILE)
+	@echo                                                               >> $(PKG_CONFIG_FILE)
+
+pkgfile-static:
+=======
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
+	@echo ------------------ Building pkg-config file
+	@echo "# Package Information for pkg-config"                        >  $(PKG_CONFIG_FILE)
+	@echo "# Author: $(AUTHOR)"                                         >> $(PKG_CONFIG_FILE)
+	@echo "# Created: `date`"                                           >> $(PKG_CONFIG_FILE)
+	@echo "# Licence: $(LICENSE)"                                       >> $(PKG_CONFIG_FILE)
+	@echo                                                               >> $(PKG_CONFIG_FILE)
+	@echo prefix=$(PREFIX)                                              >> $(PKG_CONFIG_FILE)
+	@echo exec_prefix=$(PREFIX)                                         >> $(PKG_CONFIG_FILE)
+	@echo libdir=$(LIB_DIR)                                             >> $(PKG_CONFIG_FILE)
+	@echo includedir=$(INCLUDE_DIR)                                     >> $(PKG_CONFIG_FILE)
+	@echo                                                               >> $(PKG_CONFIG_FILE)
+	@echo Name: "$(PROJECT_NAME)"                                       >> $(PKG_CONFIG_FILE)
+	@echo Description: "$(DESCRIPTION)"                                 >> $(PKG_CONFIG_FILE)
+	@echo Version: "$(PROJECT_VERSION)"                                 >> $(PKG_CONFIG_FILE)
+<<<<<<< HEAD
+	@echo Libs: $(LIB_DIR)$(PATH_SEP)$(STATIC_LIBNAME)                  >> $(PKG_CONFIG_FILE)
+	@echo Cflags: -I$(INCLUDE_DIR)$(PATH_SEP)$(PROJECT_NAME) $(LDCFLAGS)>> $(PKG_CONFIG_FILE)
+	@echo                                                               >> $(PKG_CONFIG_FILE)
+
+=======
 	@echo Libs: $(LINKERFLAG)-l$(PROJECT_NAME)-$(COMPILER)              >> $(PKG_CONFIG_FILE)
 	@echo Cflags: -I$(INCLUDE_DIR)$(PATH_SEP)$(PROJECT_NAME) $(LDCFLAGS)>> $(PKG_CONFIG_FILE)
 	@echo                                                               >> $(PKG_CONFIG_FILE)
@@ -100,6 +128,7 @@ pkgfile-static:
 	@echo Cflags: -I$(INCLUDE_DIR)$(PATH_SEP)$(PROJECT_NAME) $(LDCFLAGS)>> $(PKG_CONFIG_FILE)
 	@echo                                                               >> $(PKG_CONFIG_FILE)
 
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
 settings.ddoc:
 	@echo "PROJECTNAME  = $(PROJECT_NAME)"                              >  settings.ddoc
 	@echo "LINKPREFIX   = $(LINKERFLAG)"                                >> settings.ddoc
@@ -119,9 +148,16 @@ $(SHARED_LIBNAME): $(PICOBJECTS)
 	$(MKDIR) $(DLIB_PATH)
 	$(DC) -shared $(SONAME_FLAG) $@.$(MAJOR_VERSION) $(OUTPUT)$(DLIB_PATH)$(PATH_SEP)$@.$(PROJECT_VERSION) $^
 #$(CC) -l$(PHOBOS) -l$(DRUNTIME) -shared -Wl,-soname,$@.$(MAJOR_VERSION) -o $(DLIB_PATH)$(PATH_SEP)$@.$(PROJECT_VERSION) $^
+<<<<<<< HEAD
+=======
+
+.PHONY: object_directories
+object_directories:
+	mkdir -p $(dir $(OBJECTS))
+>>>>>>> 2afb3f5637e443de1d3af4aa3610c193cd9c4504
 
 # create object files
-$(BUILD_PATH)$(PATH_SEP)%.o : %.d
+$(BUILD_PATH)$(PATH_SEP)%.o : %.d object_directories
 	$(DC) $(DCFLAGS) $(DCFLAGS_LINK) $(DCFLAGS_IMPORT) -c $< $(OUTPUT)$@
 
 # create shared object files
